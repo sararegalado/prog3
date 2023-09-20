@@ -22,7 +22,7 @@ import javax.swing.JTextField;
  * @author andoni.eguiluz @ ingenieria.deusto.es
  */
 public class VentanaConfirmacionLenta {
-
+		private static Thread hilo;
 		private static Random r = new Random();
 	// Este método simula un proceso que tarda un tiempo en hacerse (entre 5 y 10 segundos)
 	private static void procesoConfirmar() {
@@ -52,10 +52,23 @@ public class VentanaConfirmacionLenta {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				System.out.println("Pulsando boton");
-				bAceptar.setBackground(Color.RED);
+				bAceptar.setForeground(Color.RED);
+				
+				hilo = new Thread() {
+					@Override
+					public void run() {
+						System.out.println("INICIO");
+						System.out.println(hilo.isAlive()+" "+ hilo.getState());
+						procesoConfirmar();
+						System.out.println("FIN");
+						bAceptar.setEnabled(true);
+					}
+				};
+				hilo.start();
+				
+				
 				//Trampa: variable que uses aqui las copio en la clase interna
 				//JButon btnaceptar =bAceptar clase externa
-				procesoConfirmar();
 			}
 		});
 		
