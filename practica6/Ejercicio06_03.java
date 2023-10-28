@@ -11,11 +11,10 @@ public class Ejercicio06_03 {
 	
 	private static JFrame ventana;
 	private static DataSetMunicipios dataset;
-
 	private static VentanaMunicipios ventanaDatos;
 	
 	public static void main(String[] args) {
-		ventana = new JFrame( "Ejercicio 6.3" );
+		ventana = new JFrame( "Practica 6" );
 		ventana.setDefaultCloseOperation( JFrame.DISPOSE_ON_CLOSE );
 		ventana.setLocationRelativeTo( null );
 		ventana.setSize( 200, 80 );

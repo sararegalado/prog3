@@ -2,7 +2,7 @@ package cap06.practica6;
 
 /** Permite crear objetos municipio con información de población, provincia y comunidad autónoma
  */
-public class Municipio implements FilaParaJTable {  // Especializa un comportamiento de cualquier clase que podamos querer como fila en una JTable
+public class Municipio {  
 	private int codigo;
 	private String nombre;
 	private int habitantes;
@@ -70,67 +70,4 @@ public class Municipio implements FilaParaJTable {  // Especializa un comportami
 		return "[" + codigo + "] " + nombre + ", " + habitantes + " en " + provincia + " (" + autonomia + ")";
 	}
 
-	// Implementación de FilaParaJTable
-
-	private static final Class<?>[] CLASES_COLS = { Integer.class, String.class, Integer.class, String.class, String.class };
-	private static final String[] CABECERAS_COLS = { "Código", "Nombre", "Habitantes", "Provincia", "Autonomía" };
-	
-	@Override
-	public Class<?> getColumnClass(int columnIndex) {
-		return CLASES_COLS[columnIndex];
-	}
-	
-	@Override
-	public int getColumnCount() {
-		return CLASES_COLS.length;
-	}
-
-	@Override
-	public String getColumnName(int columnIndex) {
-		return CABECERAS_COLS[columnIndex];
-	}
-
-	@Override
-	public Object getValueAt(int columnIndex) throws IndexOutOfBoundsException {
-		switch (columnIndex) {
-			case 0:
-				return getCodigo();
-			case 1:
-				return getNombre();
-			case 2:
-				return getHabitantes();
-			case 3:
-				return getProvincia();
-			case 4:
-				return getAutonomia();
-			default:
-				throw new IndexOutOfBoundsException( "Columna incorrecta: " + columnIndex );
-		}
-	}
-
-	@Override
-	public void setValueAt(Object aValue, int columnIndex) throws ClassCastException, IndexOutOfBoundsException {
-		switch (columnIndex) {
-			case 0:
-				setCodigo( (Integer) aValue );  // Se puede producir ClassCastException (igual que en el resto de casts)
-				break;
-			case 1:
-				setNombre( (String) aValue );
-				break;
-			case 2:
-				setHabitantes( (Integer) aValue );
-				break;
-			case 3:
-				setProvincia( (String) aValue );
-				break;
-			case 4:
-				setAutonomia( (String) aValue );
-				break;
-			default:
-				throw new IndexOutOfBoundsException( "Columna incorrecta: " + columnIndex );
-		}
-	}
-	
-	
 }
-

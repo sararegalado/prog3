@@ -5,15 +5,22 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Graphics;
 import java.awt.HeadlessException;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.Vector;
 import java.util.stream.Collectors;
@@ -27,14 +34,20 @@ import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTree;
+import javax.swing.Scrollable;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.border.LineBorder;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
+import javax.swing.tree.TreeSelectionModel;
 
 import org.xml.sax.helpers.ParserAdapter;
 
@@ -43,20 +56,25 @@ import org.xml.sax.helpers.ParserAdapter;
 
 public class VentanaMunicipios extends JFrame {
 	
-	DataSetMunicipios datosMunis;
+	private DataSetMunicipios datosMunis;
+	
+	private HashMap<String,ArrayList<String>> comunidadesProvincias;
+	private HashMap<String, Municipio> buscarNombresMunicipio;
+
 	
 //	Paneles
 	private JPanel pSuperior;
 	private JPanel pInferior;
 	private JPanel pIzquierda;
-	private JPanel pDerecha;
+	private JPanel pnlGrafico;
 	private JPanel pCentro;
+	
 	
 	private JLabel lblMensaje;
 	
 	private DefaultMutableTreeNode nodoRaiz;
 	private DefaultTreeModel modeloArbol;
-	private JTree arbol = new JTree();
+	private JTree arbol;
 	
 	private DefaultTableModel modeloTabla;
 	private JTable tablaDatos;
@@ -65,13 +83,18 @@ public class VentanaMunicipios extends JFrame {
 	private JScrollPane scrollPaneTabla;
 	
 	//Pintado tabla
-	private boolean coloreadoActivo = false;
+	private boolean hacerClickDerecho;
+	private String muniNoSel = "";
+	private Municipio muniSel;
 	
 	private JButton bAnyadir;
 	private JButton bBorrar;
 	private JButton bOrden;
 	
 	private boolean ordenarPorNombre = true;
+	
+	//Boton orden
+	private boolean sortByNames = true;
 	
 	
 	
@@ -84,78 +107,41 @@ public class VentanaMunicipios extends JFrame {
 		pSuperior = new JPanel();
 		pInferior = new JPanel();
 		pIzquierda = new JPanel();
-		pDerecha = new JPanel();
 		pCentro = new JPanel();
+		pIzquierda.setLayout(new BorderLayout());
 		
 		pSuperior.setBackground(Color.CYAN);
 		pInferior.setBackground(Color.RED);
 		pIzquierda.setBackground(Color.GREEN);
-		pDerecha.setBackground(Color.ORANGE);
+//		pnlGrafico.setBackground(Color.ORANGE);
 //		pCentro.setBackground(Color.PINK);
 		
 		pSuperior.setPreferredSize(new Dimension(800,70));
 		pInferior.setPreferredSize(new Dimension(800,70));
-		pIzquierda.setPreferredSize(new Dimension(190,70));
-		pDerecha.setPreferredSize(new Dimension(140,70));
+		pIzquierda.setPreferredSize(new Dimension(300,600));
+//		pnlGrafico.setPreferredSize(new Dimension(140,70));
 		
 		lblMensaje = new JLabel("Mensaje");
 		pSuperior.add(lblMensaje);
 		
-		nodoRaiz = new DefaultMutableTreeNode("Municipios");
-		modeloArbol = new DefaultTreeModel(nodoRaiz);
-		arbol = new JTree(modeloArbol);
 		
-		
-		modeloTabla = new DefaultTableModel();
-	
-//		Columnas de la tabla, editar el modelo
-		modeloTabla.addColumn("Código");
-		modeloTabla.addColumn("Nombre");
-		modeloTabla.addColumn("Habitantes");
-		modeloTabla.addColumn("Población");
-		
-
-		tablaDatos = new JTable(modeloTabla);
-		tablaDatos.setRowHeight(30);
+		arbol = new JTree();
+		tablaDatos = new JTable();
 		
 
 		
 		
-//		Añadir renderer
-		tablaDatos.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
-		
-			private JProgressBar pb = new JProgressBar(50000,5000000);
-			
-		@Override
-		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-			
-			if (column == 3) {
-				
-			int poblacion = Integer.parseInt(value.toString());
-			System.out.println("Población: " + poblacion); 
-	        pb.setValue(poblacion);
-	       
-	        int red = (int)Math.min(255,Math.max(0,((poblacion - 50000.0) / 4950000.0) * 255));
-	        int green = (int)Math.min(255, Math.max(0, 255 - ((poblacion - 50000.0) / 4950000.0) * 255));
-	        Color colorValor = new Color(red, green, 0);
-	        
-	        pb.setForeground(colorValor);
-	        return pb;
-			}
-			Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-			return comp;
-					
-		}
-		});
+//		
 		
 		
 				
 		scrollPaneArbol = new JScrollPane(arbol);
 		scrollPaneTabla = new JScrollPane(tablaDatos);
-		scrollPaneArbol.setPreferredSize(new Dimension(180,600));
+		scrollPaneArbol.setPreferredSize(new Dimension(290,595));
+		scrollPaneTabla.setPreferredSize(new Dimension(700,600));
 
 		
-		pIzquierda.add(scrollPaneArbol);
+		pIzquierda.add(scrollPaneArbol,BorderLayout.EAST);
 		pCentro.add(scrollPaneTabla);
 		
 		bAnyadir = new JButton("Añadir");
@@ -169,67 +155,48 @@ public class VentanaMunicipios extends JFrame {
 		add(pSuperior, BorderLayout.NORTH);
 		add(pInferior,BorderLayout.SOUTH);
 		add(pIzquierda,BorderLayout.WEST);
-		add(pDerecha,BorderLayout.EAST);
+//		add(pnlGrafico,BorderLayout.EAST);
 		add(pCentro, BorderLayout.CENTER);
 		
 		
+		
+		
+		
+		arbol.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 		
 //		Añadir escuchador al JTree para manejar seleccion ded prov.
 		arbol.addTreeSelectionListener(new TreeSelectionListener() {
 					
 			@Override
 			public void valueChanged(TreeSelectionEvent e) {
-				DefaultMutableTreeNode seleccionado = (DefaultMutableTreeNode) arbol.getLastSelectedPathComponent();
 				
-				if (seleccionado != null && seleccionado.getLevel()==2) {
-					String provSeleccionada = seleccionado.getUserObject().toString();
+				TreePath p = e.getPath();
+				
+				if (p != null && p.getPathCount() == 3) {
+					Object provSeleccionada = arbol.getLastSelectedPathComponent();
+					modeloTabla.setRowCount(0);
+					setDatosTabla(provSeleccionada.toString());
+					muniSel = null;
+					muniNoSel = "";
+					hacerClickDerecho = false;
+					tablaDatos.repaint();
 					
-//					Limpiar la tabla antes de meter datos de otras provincias
-					while (modeloTabla.getRowCount() > 0) {
-                        modeloTabla.removeRow(0);
-                       
-                    }
 					
-					for(Municipio m : datosMunis.getListaMunicipios()) {
-						if(m.getProvincia().equals(provSeleccionada)) {
-							modeloTabla.addRow(new Object[] {
-								m.getCodigo(),
-								m.getNombre(),
-								m.getHabitantes(),
-								m.getHabitantes()		
-							});
+					
 						}
 					}
-				}
-			}
-		});
-		
-		
-//		Añadir mouse listener a la tabla
-		tablaDatos.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
 				
-				if(SwingUtilities.isRightMouseButton(e)) {
-					int row = tablaDatos.rowAtPoint(e.getPoint());
-					int col = tablaDatos.columnAtPoint(e.getPoint());
-					
-					if (row >= 0 && col >= 0) {
-						int poblacion = Integer.parseInt(tablaDatos.getValueAt(row, 3).toString());
-						
-						if (poblacion <= 80000) {
-							
-							tablaDatos.setSelectionBackground(Color.GREEN);
-							
 			
-							} else {
-							tablaDatos.setSelectionBackground(Color.RED);
-							
-						}	
-					}
-				}
-			}
 		});
+		
+		
+
+		
+		
+
+			
+		
+		
 		
 		//Añadir fila
 		bAnyadir.addActionListener( new ActionListener() {
@@ -244,7 +211,7 @@ public class VentanaMunicipios extends JFrame {
 				
 				
 				
-				datosMunis.anyadir( new Municipio( datosMunis.getListaMunicipios().size()+1, "Nombre", 0, "Provincia", "Autonomía" ) );
+				datosMunis.anyadir( new Municipio( datosMunis.getListaMunicipios().size()+1, "Nombre", 50001, "Provincia","Autonomia" ) );
 					
 					
 				
@@ -264,7 +231,7 @@ public class VentanaMunicipios extends JFrame {
 		                modeloTabla.removeRow(filaSel);
 		                
 		                // Eliminar el municipio de los datos subyacentes
-		                datosMunis.borraFila(filaSel); // Debes implementar el método eliminar en DataSetMunicipios
+		                datosMunis.getListaMunicipios().remove(filaSel);
 		            }
 		        } else {
 		            JOptionPane.showMessageDialog(null, "Selecciona un municipio para borrar.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -274,65 +241,508 @@ public class VentanaMunicipios extends JFrame {
 		});
 		
 		//Boton orden
-//		bOrden.addActionListener(new ActionListener() {
-//		    @Override
-//		    public void actionPerformed(ActionEvent e) {
-//		    	if (ordenadoPorNombre) {
-//		    		
-//		    		
-//		    	}
-//		    
-//		    
-//		    
-//		    
-//		    }
-//		});
+		bOrden.addActionListener(new ActionListener() {
+		    @Override
+		    public void actionPerformed(ActionEvent e) {
+		        sortByNames = !sortByNames; // Toggle sorting order
+		        
+		        // Update the table data based on the new sorting order
+		        updateTableData();
+		    }
+		});
+		
+		
+		//Renderer arbol
+		arbol.setCellRenderer(new DefaultTreeCellRenderer() {
+
+			private static final long serialVersionUID = 1L;
+
+		    @Override
+		    public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
+		            boolean leaf, int row, boolean hasFocus) {
+		        Component c = super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
+		        DefaultMutableTreeNode nodo = (DefaultMutableTreeNode) value;
+
+		        if (leaf) {
+		            JPanel pnlPb = new JPanel(new BorderLayout());
+		            pnlPb.setPreferredSize(new Dimension(200,600));
+		            int habitantes = datosMunis.HabitantesPorProv(nodo.getUserObject().toString());
+		            JProgressBar pb = new JProgressBar(50000, 1000000);
+		            pb.setPreferredSize(new Dimension(50,30));
+		            pb.setValue(habitantes);
+		            pb.setStringPainted(false);
+		            pb.setString(String.format("%,d", habitantes));
+
+		            JLabel label = new JLabel(nodo.getUserObject().toString());
+		            label.setPreferredSize(new Dimension(150,30));
+		            
+		            pnlPb.add(label, BorderLayout.WEST);
+		            pnlPb.add(pb, BorderLayout.CENTER);
+		            
+		            return pnlPb;
+		        }
+
+		        return c;
+			}
+			
+			
+		});
 
 		
 		
 		
 		
 	}
+	
+	
+	
+	
 	
 	public void setDatosArbol( DataSetMunicipios datosMunis ) {
 		
-//		Crear el JTree
 		
 		this.datosMunis = datosMunis;
 		
-//		Para que no se repitan las provincias
-		Set<String> provincias = new HashSet<>();	
+		comunidadesProvincias = datosMunis.ComunidadesProvincias();
+		buscarNombresMunicipio = datosMunis.BucarNombresMunicipio();
 		
-		for(Municipio municipio:datosMunis.getListaMunicipios()) {
-			DefaultMutableTreeNode nodoAutonomia = null;
-	        DefaultMutableTreeNode nodoProvincia = new DefaultMutableTreeNode(municipio.getProvincia());
-		
-	       
-	     if (!provincias.contains(municipio.getProvincia())) {
-		 for (int i = 0; i < nodoRaiz.getChildCount(); i++) {
-             DefaultMutableTreeNode nodo = (DefaultMutableTreeNode) nodoRaiz.getChildAt(i);
-             if (nodo.getUserObject().toString().equals(municipio.getAutonomia())) {
-                 nodoAutonomia = nodo;
-                 break;
-             }
-         }
-
-         if (nodoAutonomia == null) {
-             nodoAutonomia = new DefaultMutableTreeNode(municipio.getAutonomia());
-             nodoRaiz.add(nodoAutonomia);
-         }
-
-         nodoAutonomia.add(nodoProvincia);
-         provincias.add(municipio.getProvincia());
-        }
-		} 
+		pnlGrafico = new PnlGrafico(datosMunis);
+		JScrollPane spGrafico = new JScrollPane(pnlGrafico);
+		spGrafico.setPreferredSize(new Dimension(280,600));
+		this.add(spGrafico, BorderLayout.EAST);
+		pnlGrafico.setVisible(true);
 		
 		
+		
+		//Definir el modelo del JTree
+		DefaultMutableTreeNode nodoRaiz = new DefaultMutableTreeNode("Municipios");
+		modeloArbol = new DefaultTreeModel(nodoRaiz);
+		int count = 0;
+		
+		//Crear el JTree y asignarle el modelo
+		
+		ArrayList<String> autonomiasOrdenadas = new ArrayList<>(comunidadesProvincias.keySet());
+		Collections.sort(autonomiasOrdenadas);
+		
+		for (String a : autonomiasOrdenadas) {
+			DefaultMutableTreeNode nodo = new DefaultMutableTreeNode(a);
+			modeloArbol.insertNodeInto(nodo, nodoRaiz, count);
+			count = count + 1;
+			ArrayList<String> provinciasA = comunidadesProvincias.get(a);
+			for (int i=0 ; i< provinciasA.size() ; i++ ) {
+				DefaultMutableTreeNode nodoProv = new DefaultMutableTreeNode(provinciasA.get(i));
+				modeloArbol.insertNodeInto(nodoProv, nodo, i);
+			}
+		}
+		arbol.setModel(modeloArbol);
+		
+		//Definir el modelo de la tabla
+		
+		modeloTabla = new DefaultTableModel() {
+			private static final long serialVersionUID = 1L;
+			
+			
+			//Que columnas se pueden editar
+			@Override
+			public boolean isCellEditable(int row, int column) {
+				if (column ==1 || column == 2) {
+					return true;
+				} else {
+					return false;
+				}
+			}
+			
+			//Actualizar tabla
+			@Override
+			public void setValueAt(Object value, int row, int column) {
+				if (column == 2) {
+					int numero = Integer.parseInt(value+"");
+					setValueAt(numero,row,3);
+					String nombre = getValueAt(row,1).toString();
+					Municipio m = buscarNombresMunicipio.get(nombre);
+					m.setHabitantes(numero);
+					pCentro.repaint();
+				
+				} if(column == 1) {
+					String nombre = tablaDatos.getValueAt(row, 1).toString();
+					String nombreNuevo = value.toString();
+					Municipio municipio = buscarNombresMunicipio.get(nombre);
+					municipio.setNombre(nombreNuevo);
+					buscarNombresMunicipio.remove(nombre);
+					buscarNombresMunicipio.put(nombreNuevo, municipio);
+					pCentro.repaint();
+				}
+				super.setValueAt(value, row, column);
+			}
+			
+		};
+		
+		modeloTabla.addColumn("Código");
+		modeloTabla.addColumn("Municipio");
+		modeloTabla.addColumn("Habitantes");
+		modeloTabla.addColumn("Población");
+		modeloTabla.addColumn("Provincia");
+		modeloTabla.addColumn("Autonomía");
+		
+		tablaDatos.setModel(modeloTabla);
+		
+		
+		
+
+
+//		Añadir mouse listener a la tabla (solucion buena)
+		tablaDatos.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getButton() == MouseEvent.BUTTON3) {
+					
+					int fila = tablaDatos.rowAtPoint(e.getPoint());
+					int col = tablaDatos.columnAtPoint(e.getPoint());
+					
+					if (col == 1 && fila >= 0) {
+						
+						String municipio = (String) tablaDatos.getValueAt(fila, col);
+						if (hacerClickDerecho == false) {
+							muniNoSel = municipio;
+							
+							muniSel = buscarNombresMunicipio.get(municipio);
+							
+							hacerClickDerecho = true;
+							
+						} else {
+							if (municipio == muniNoSel) {
+								muniNoSel = "";
+								muniSel = null;
+								hacerClickDerecho = false;
+							} else {
+								muniNoSel = municipio;
+								muniSel = buscarNombresMunicipio.get(municipio);
+								hacerClickDerecho = true;
+							}
+						}
+					}
+					tablaDatos.repaint();
+				}
+				
+				
+			}
+		});
+		
+		//Añadir renderer de la tabla
+		tablaDatos.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+		
+			private static final long serialVersionUID = 1L;
+			private JProgressBar pb = new JProgressBar(50000,5000000);
+			
+		@Override
+		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+			
+			
+			Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+//			comp.setBackground(Color.WHITE);
+			
+			if (isSelected) {
+	            // Cambia el fondo de la celda seleccionada a un color diferente (por ejemplo, gris)
+	            comp.setForeground(Color.BLACK);
+	            comp.setBackground(Color.WHITE);
+	            
+	            }
+	        	else {
+	            // Establece el fondo de las celdas no seleccionadas
+	            comp.setBackground(Color.WHITE);
+	        }
+//			
+//			
+			
+			if (column == 1) {
+				
+				if (hacerClickDerecho) {
+					
+					if (Integer.parseInt(table.getValueAt(row, 2)+"") > muniSel.getHabitantes()) {
+						
+						comp.setBackground(Color.RED);
+					
+					} else if (Integer.parseInt(table.getValueAt(row, 2)+"") < muniSel.getHabitantes()) {
+						comp.setBackground(Color.GREEN);
+						
+					}
+
+					} else {
+						comp.setBackground(Color.WHITE);
+						comp.setForeground(Color.BLACK);;
+					}
+				
+				}
+				
+			if (column == 3) {
+				int valor = Integer.parseInt(value.toString());
+				pb.setValue(valor);
+				int red = (int)Math.min(255, Math.max(0,((valor - 50000.0)/4950000)*255));
+				int green = (int) Math.min(255,Math.max(0,255 - ((valor -50000.0)/4950000)*255));
+				Color colorValor = new Color(red,green,0);
+				pb.setForeground(colorValor);
+					return pb;
+			}
+				return comp;
+							
+		
+			}
+		});
+		
+		
+		
+
+		
 
 	
-	}
 	
 	
+		}
+	
+	
+	
+	
+		public void setDatosTabla(String provincia) {
+			ArrayList<String> municipios = datosMunis.MunicipiosPorProvincia().get(provincia);
+			for (String n : municipios) {
+				Municipio mun = datosMunis.BucarNombresMunicipio().get(n);
+				modeloTabla.addRow(new Object[] {mun.getCodigo(),mun.getNombre(),mun.getHabitantes(),mun.getHabitantes(),mun.getProvincia(),mun.getAutonomia()});
+			}
+			tablaDatos.repaint();
+			
+			
+		}
+		
+		private void updateTableData() {
+		    modeloTabla.setRowCount(0); // Clear the existing table data
+		    
+		    String provinciaSeleccionada = arbol.getLastSelectedPathComponent().toString();
+		    
+		    // Get the list of municipalities for the selected province
+		    ArrayList<Municipio> municipios = new ArrayList<>();
+		    for (String nombreMunicipio : datosMunis.MunicipiosPorProvincia().get(provinciaSeleccionada)) {
+		        municipios.add(datosMunis.BucarNombresMunicipio().get(nombreMunicipio));
+		    }
+		    
+		    // Sort the list based on the selected criteria
+		    if (sortByNames) {
+		        // Sort by name
+		        municipios.sort(Comparator.comparing(Municipio::getNombre));
+		    } else {
+		        // Sort by inhabitants (from highest to lowest)
+		        municipios.sort(Comparator.comparing(Municipio::getHabitantes).reversed());
+		    }
+		    
+		    // Populate the table with sorted data
+		    for (Municipio municipio : municipios) {
+		        modeloTabla.addRow(new Object[] { municipio.getCodigo(), municipio.getNombre(), municipio.getHabitantes(), municipio.getHabitantes(), municipio.getProvincia(), municipio.getAutonomia() });
+		    }
+		    tablaDatos.repaint();
+		}
+		
+		private static class PnlGrafico extends JPanel implements Scrollable{
+			private static final long serialVersionUID = 1L;
+			private final int WIDTH_BARRA = 50;
+			private final int MIN_HEIGHT_BARRA = 500;
+			private final int POBLACION_ESTADO;
+			
+			private String provincia="";
+			private static int zoomLevel = 10;
+			private int preferredY = 80+MIN_HEIGHT_BARRA*zoomLevel; 
+			private DataSetMunicipios dataset;
+			private ArrayList<barraVis> listaBarras;
+			private int heightAnterior = 0;
+			
+			@Override
+	        public Dimension getPreferredSize() {
+	            return new Dimension(280, preferredY);
+	        }
+
+	        @Override
+	        public Dimension getMinimumSize() {
+	            return new Dimension(280, 128);
+	        }
+			
+		
+
+			public void setProvincia(String provincia) {
+				this.provincia = provincia;
+			}
+
+			private PnlGrafico(DataSetMunicipios dataset){
+				this.dataset=dataset;
+				POBLACION_ESTADO = dataset.getPoblacionTotal();
+				setBorder(new LineBorder(Color.BLACK, 1));
+				
+				addMouseListener(new MouseAdapter() {
+		            @Override
+		            public void mouseClicked(MouseEvent e) {
+		                if (e.getButton() == MouseEvent.BUTTON1) {
+		                    incZoomLevel();
+		                    PnlGrafico.this.repaint();
+		                } else if (e.getButton() == MouseEvent.BUTTON3) {
+		                    decZoomLevel();
+		                    PnlGrafico.this.repaint();
+		                }
+		            }
+		        });
+			}
+			
+
+			public static void incZoomLevel() {
+		        if (zoomLevel<10) {
+		        	zoomLevel++;
+		        }
+		    }
+			public static void decZoomLevel() {
+		        if (zoomLevel>1) {
+		        	zoomLevel--;
+		        }
+		    }
+			
+			
+			@Override
+			protected void paintComponent(Graphics g) {
+				// TODO Auto-generated method stub
+				super.paintComponent(g);
+				if (!provincia.equals("")) {
+					crearListaBarras();
+					heightAnterior = 0;
+					
+					g.setColor(Color.cyan);
+					g.fillRect(200, preferredY-MIN_HEIGHT_BARRA*zoomLevel, WIDTH_BARRA, MIN_HEIGHT_BARRA*zoomLevel);
+					g.setColor(Color.BLACK);
+					g.drawString("Estado",200,preferredY-MIN_HEIGHT_BARRA*zoomLevel-30);
+					for (barraVis bv: listaBarras) {
+						
+						double heightD = (MIN_HEIGHT_BARRA*bv.muni.getHabitantes())/POBLACION_ESTADO;
+						int height = (int) heightD*zoomLevel;
+						int y = preferredY-height-heightAnterior;
+						
+						g.setColor(bv.getColorBarra());
+						g.fillRect(20, y, 50, height);
+						
+						g.setColor(Color.black);
+						g.drawLine(20, y, 70, y);
+						
+						g.drawString(bv.getMuni().getNombre(), 73, y);
+						
+						heightAnterior = height+heightAnterior;
+					}
+					g.drawString(provincia, 20, preferredY-heightAnterior-30);
+				}
+				
+			}
+			
+			public void crearListaBarras() {
+				int poblacionProvincia = 0;
+				ArrayList<barraVis> listaBarras2 = new ArrayList<barraVis>();
+				HashMap<String,Municipio> mapaBusquedaMunis = dataset.BucarNombresMunicipio();
+				HashMap<String,ArrayList<String>> mapaProvinciasMunis = dataset.MunicipiosPorProvincia();
+				for (String m: mapaProvinciasMunis.get(provincia)) {
+					
+					Municipio muni = mapaBusquedaMunis.get(m);
+					Random rand = new Random();
+			        int red = rand.nextInt(256); 
+			        int green = rand.nextInt(256); 
+			        int blue = rand.nextInt(256);
+			        poblacionProvincia = poblacionProvincia + muni.getHabitantes();
+					int heightBarra = (500*muni.getHabitantes())/POBLACION_ESTADO;
+					barraVis bv = new barraVis(muni,new Color(red,green,blue));				
+					listaBarras2.add(bv);
+				}
+
+				if (!listaBarras2.equals(listaBarras)) {
+					listaBarras = listaBarras2;
+				}
+			}
+
+			
+			
+			@Override
+			public Dimension getPreferredScrollableViewportSize() {
+				// TODO Auto-generated method stub
+				return new Dimension(280,preferredY);
+			}
+
+
+			@Override
+			public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+				// TODO Auto-generated method stub
+				return 128;
+			}
+
+
+			@Override
+			public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+				// TODO Auto-generated method stub
+				return 128;
+			}
+
+
+			@Override
+			public boolean getScrollableTracksViewportWidth() {
+				// TODO Auto-generated method stub
+				return getPreferredSize().width
+	                    <= getParent().getSize().width;
+			}
+
+
+			@Override
+			public boolean getScrollableTracksViewportHeight() {
+				// TODO Auto-generated method stub
+				return getPreferredSize().height
+	                    <= getParent().getSize().height;
+			}
+		}
+		
+		private static class barraVis{
+			
+			private Municipio muni;
+			private Color colorBarra;
+			
+			public Municipio getMuni() {
+				return muni;
+			}
+			public Color getColorBarra() {
+				return colorBarra;
+			}
+
+			public barraVis(Municipio muni, Color colorBarra) {
+				this.muni = muni;
+				this.colorBarra = colorBarra;
+			}
+			
+			@Override
+			public String toString() {
+				return "barraVis [muni=" + muni + "]";
+			}
+			
+			@Override
+			public boolean equals(Object obj) {
+			    if (this == obj) {
+			        return true;  // Si es la misma instancia, son iguales
+			    }
+			    if (obj == null || getClass() != obj.getClass()) {
+			        return false;  // Si el objeto es nulo o no es de la misma clase, no son iguales
+			    }
+			    
+			    // Convierte el objeto pasado en el mismo tipo que esta instancia
+			    barraVis other = (barraVis) obj;
+			    
+			    // Realiza la comparación de los dos atributos específicos
+			    return muni.equals(other.muni);
+			}
+			
+		}
+			
+			
+			
+			
+		}
+
+
+
 	
 
 	
@@ -344,4 +754,4 @@ public class VentanaMunicipios extends JFrame {
 	
 		
 
-}
+

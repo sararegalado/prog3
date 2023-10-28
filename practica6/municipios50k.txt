@@ -30,7 +30,7 @@
 94	Valdemoro	79100	 Comunidad de Madrid	 Comunidad de Madrid
 95	Rubí	79007	 Barcelona	 Cataluña
 96	Manresa	77459	 Barcelona	 Cataluña
-97	Guecho	5000000	 Vizcaya	 País Vasco
+97	Guecho	76365	 Vizcaya	 País Vasco
 98	Palencia	76302	 Palencia	 Castilla y León
 99	Alcalá de Guadaíra	75917	 Sevilla	 Andalucía
 100	Gandía	75911	Valencia	 Comunidad Valenciana
